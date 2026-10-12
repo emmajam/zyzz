@@ -1578,6 +1578,8 @@ pane()
         "unset",
         "none",
         "block",
+        "-webkit-box",
+        "-webkit-inline-box",
         "block flex",
         "block flow",
         "block flow list-item",
@@ -1692,7 +1694,7 @@ pane()
           [
             {
               "code": 2322,
-              "message": "Type '"invalid-display"' is not assignable to type '("invalid-display" & Reference<"*">) | ("invalid-display" & readonly [Atom<Value<{ readonly kind: "enum"; readonly values: readonly ["block", "block flex", "block flow", "block flow list-item", ... 106 more ..., "table-row-group"]; }> | \`\${string} !custom\` | Reference<...>>, ...Atom<...>[]])'.",
+              "message": "Type '"invalid-display"' is not assignable to type '("invalid-display" & Reference<"*">) | ("invalid-display" & readonly [Atom<Value<{ readonly kind: "enum"; readonly values: readonly ["-webkit-box", "-webkit-inline-box", "block", "block flex", ... 108 more ..., "table-row-group"]; }> | \`\${string} !custom\` | Reference<...>>, ...Atom<...>[]])'.",
               "span": "display",
             },
           ]
