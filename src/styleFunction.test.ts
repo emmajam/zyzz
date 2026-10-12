@@ -2313,6 +2313,17 @@ export const outside = style({selectors:{[\`\${styles.card} > &\`]:{ margin: 0 }
       )
     })
 
+    test('rejects template keys outside selectors at the key', () => {
+      expect(() =>
+        Source.extract({
+          moduleId: 'root.ts',
+          source: `import {style} from 'zyzz'; const card=style({}); style({[\`\${card}:hover &\`]:{color:'red'}})`,
+        }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Source.ExtractError: root.ts:57: Template selector keys require a selectors object.]`,
+      )
+    })
+
     test('keeps lexical aliases and deduplicated definitions distinct', () => {
       const result = Graph.compile({
         modules: {
@@ -2347,9 +2358,7 @@ const card=style({}); export const label=style((values:{opacity:number})=>({sele
       })
       expect(result.modules['dynamic.ts']!.code).toMatchInlineSnapshot(`
         "
-        import { Props as __zyzzProps } from 'zyzz/runtime';
-
-        const card=__zyzzProps.create({className:"z-style-RPENcp-card"}); export const label=(((input:Parameters<import('zyzz').style.Dynamic<{opacity:number}>>[0])=>{const v0=input["opacity"] as string | number;const external=input.className;const style=input.style;return {className:external?"z-RPENcp-label-opacity-0 z-style-RPENcp-label"+" "+external:"z-RPENcp-label-opacity-0 z-style-RPENcp-label",style:{...input.vars,...style,"--z-RPENcp-label-opacity":v0===''?' ':v0}}}) as import('zyzz').style.Dynamic<{opacity:number}>);"
+        const card=(void 0 as unknown as import('zyzz').style.ReturnType); export const label=(((input:Parameters<import('zyzz').style.Dynamic<{opacity:number}>>[0])=>{const v0=input["opacity"] as string | number;const external=input.className;const style=input.style;return {className:external?"z-RPENcp-label-opacity-0 z-style-RPENcp-label"+" "+external:"z-RPENcp-label-opacity-0 z-style-RPENcp-label",style:{...input.vars,...style,"--z-RPENcp-label-opacity":v0===''?' ':v0}}}) as import('zyzz').style.Dynamic<{opacity:number}>);"
       `)
       expect(() =>
         Source.extract({
