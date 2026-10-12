@@ -1186,6 +1186,46 @@ export function zyzz(options: zyzz.Options = {}): Plugin {
       .map(([, configuration]) => configuration)
   }
 
+  /**
+   * Pre-bundles the runtime in each development environment that would
+   * otherwise discover it while serving a request.
+   */
+  async function includeRuntime(server: ViteDevServer) {
+    // Portable output keeps its authored imports and adds no runtime import.
+    if (options.compiler === false) return
+
+    // Portable build adapters share this module and do not require Vite.
+    const { createIdResolver } = await import('vite')
+    const resolve = createIdResolver(server.config, {
+      asSrc: false,
+      scan: true,
+    })
+
+    for (const environment of Object.values(server.environments)) {
+      const optimizeDeps = environment.config.optimizeDeps
+
+      // Without discovery, Vite optimizes only the listed dependencies and
+      // never re-runs for an import found while serving a request.
+      if (!environment.depsOptimizer || optimizeDeps.noDiscovery) continue
+      if (
+        optimizeDeps.include?.includes(runtime) ||
+        optimizeDeps.exclude?.some((id) => id === 'zyzz' || id === runtime)
+      )
+        continue
+
+      // Vite optimizes a discovered import only inside node_modules. Linked
+      // and aliased copies stay source modules beside the other entrypoints.
+      if (!(await resolve(environment, runtime))?.includes('node_modules'))
+        continue
+
+      // Vite scans authored source, so the runtime import that compilation
+      // adds first appears while a request transforms a module. Discovering
+      // it then re-runs the optimizer, and modules loaded before the re-run
+      // can keep a separate copy of a shared dependency such as React.
+      optimizeDeps.include = [...(optimizeDeps.include ?? []), runtime]
+    }
+  }
+
   return {
     buildStart() {
       reads.delete(this.environment)
@@ -1221,26 +1261,33 @@ export function zyzz(options: zyzz.Options = {}): Plugin {
         }
       },
     },
-    configureServer(server) {
-      // Directory watches belong to the server, not module import dependencies.
-      server.watcher.add(directories.slice(1))
+    configureServer: {
+      // Framework plugins can initialize dependency optimizers from their own
+      // server hooks, after which the include list is no longer read.
+      order: 'pre',
+      async handler(server) {
+        // Directory watches belong to the server, not module import dependencies.
+        server.watcher.add(directories.slice(1))
 
-      server.middlewares.use((request, response, next) => {
-        const path = new URL(request.url ?? '/', 'http://localhost').pathname
-        const file = assets.get(path)
-        if (!file) return next()
+        server.middlewares.use((request, response, next) => {
+          const path = new URL(request.url ?? '/', 'http://localhost').pathname
+          const file = assets.get(path)
+          if (!file) return next()
 
-        Fs.readFile(file).then((content) => {
-          response.setHeader(
-            'Content-Type',
-            file.endsWith('.svg')
-              ? 'image/svg+xml'
-              : 'application/octet-stream',
-          )
-          response.setHeader('Cache-Control', 'no-cache')
-          response.end(content)
-        }, next)
-      })
+          Fs.readFile(file).then((content) => {
+            response.setHeader(
+              'Content-Type',
+              file.endsWith('.svg')
+                ? 'image/svg+xml'
+                : 'application/octet-stream',
+            )
+            response.setHeader('Cache-Control', 'no-cache')
+            response.end(content)
+          }, next)
+        })
+
+        await includeRuntime(server)
+      },
     },
     async configResolved(config) {
       root = await Fs.realpath(config.root)
@@ -1667,6 +1714,7 @@ type Host = {
 }
 
 const prefix = '\0zyzz:'
+const runtime = 'zyzz/runtime'
 const sharedId = `${prefix}shared.css`
 
 function cssId(file: string) {
