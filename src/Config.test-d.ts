@@ -223,6 +223,22 @@ describe('create', () => {
     style([label, { paddingHorizontal: 'missing' }])
   })
 
+  test('types rejected definitions as static styles', () => {
+    const { style } = PublicConfig.create({ vars: { spacing: { md: '8px' } } })
+    const card = style({
+      // @ts-expect-error The diagnostic stays on the untokenized declaration.
+      padding: '7px',
+    })
+    const dynamic = style((values: { width: `${number}px` }) => ({
+      width: `${values.width} !custom`,
+    }))
+
+    expectTypeOf(card()).toEqualTypeOf(style({ padding: 'md' })())
+    expectTypeOf(dynamic({ width: '8px' })).toEqualTypeOf(card())
+    // @ts-expect-error Valid callbacks still require their values.
+    dynamic()
+  })
+
   test('preserves token domains in grouped styles from destructured helpers', () => {
     const { style, theme } = Config.create({
       theme: { color: { brand: '#06c' }, spacing: { md: '8px' } },

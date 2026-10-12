@@ -146,6 +146,22 @@ describe('style', () => {
     // @ts-expect-error Unknown keys in a union branch are rejected.
     style(union)
   })
+
+  test('types rejected objects and arrays as static definitions', () => {
+    const card = style({
+      color: '#fff',
+      // @ts-expect-error The diagnostic stays on the invalid declaration.
+      display: 'unknown-display',
+    })
+    const composed = style([
+      card,
+      // @ts-expect-error Composition entries keep declaration diagnostics.
+      { display: 'unknown-display' },
+    ])
+
+    expectTypeOf(card()).toEqualTypeOf<style.Props>()
+    expectTypeOf(composed()).toEqualTypeOf<style.Props>()
+  })
 })
 
 describe('atRules', () => {

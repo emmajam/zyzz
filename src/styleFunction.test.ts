@@ -166,6 +166,8 @@ const dynamic = style((values: { width: \`\${number}px\` }) => ({
   width: values.width,
 }))
 dynamic({ width: '12px' })
+// A rejected declaration leaves this application without diagnostics.
+pane()
 `
     let version = 0
     const snapshots = new Map<string, Ts.IScriptSnapshot>()
